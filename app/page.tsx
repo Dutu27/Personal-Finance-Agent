@@ -8,6 +8,10 @@ function supabase(){if(!url||!key)throw new Error('Add the Supabase URL and publ
 type Tx={id:string;merchant_raw:string|null;description:string|null;amount:number;currency:string|null;completed_date:string|null;category_id:string|null};
 type Cat={id:string;name:string};
 const fmt=(amount:number,currency:string|null)=>new Intl.NumberFormat('en',{style:'currency',currency:currency||'EUR'}).format(Math.abs(amount));
+async function readableError(error:unknown){
+ if(error&&typeof error==='object'&&'context'in error){const context=(error as {context?:unknown}).context;if(context instanceof Response){const body=await context.clone().json().catch(()=>null);if(typeof body?.error==='string')return body.error;if(typeof body?.message==='string')return body.message}}
+ return error instanceof Error?error.message:'The request failed. Please try again.';
+}
 export default function Home(){ const [session,setSession]=useState<Session|null>(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[confirmEmail,setConfirmEmail]=useState(''),[password,setPassword]=useState(''),[signup,setSignup]=useState(false);
  const [rows,setRows]=useState<Tx[]>([]),[cats,setCats]=useState<Cat[]>([]),[file,setFile]=useState<File|null>(null),[importFile,setImportFile]=useState<File|null>(null),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[accountMenuOpen,setAccountMenuOpen]=useState(false),[accountDetailsOpen,setAccountDetailsOpen]=useState(false);
  const accountMenuRef=useRef<HTMLDivElement|null>(null);
@@ -37,7 +41,7 @@ export default function Home(){ const [session,setSession]=useState<Session|null
     if(!data?.ok)throw new Error(data?.error||'Import failed. Check that the file is a bank statement or Revolut CSV.');
     setNotice(String(data.rows_processed||0)+' transactions imported; '+String(data.rows_skipped||0)+' skipped or duplicate rows.');
     setImportFile(null);await load();
-  }catch(e){setNotice((e as Error).message)}finally{setBusy(false)}
+  }catch(e){setNotice(await readableError(e))}finally{setBusy(false)}
  };
  const run=async(kind:'categorize'|'receipt')=>{setBusy(true);setNotice(kind==='categorize'?'Sorting uncategorized transactions…':'Reading receipt…');try{const s=supabase();let result;if(kind==='categorize'){result=await s.functions.invoke('categorize-transactions',{body:{limit:50}})}else{if(!file)throw new Error('Choose a receipt image first.');const image_base64=await new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Unable to read image'));r.readAsDataURL(file)});result=await s.functions.invoke('analyze-receipt',{body:{image_base64,filename:file.name}})}if(result.error)throw result.error;if(!result.data?.ok)throw Error(result.data?.error||'Operation failed');setNotice(kind==='categorize'?String(result.data.processed)+' transactions categorized.':'Receipt analyzed for '+(result.data.extraction?.merchant_name||'a merchant')+'.');setFile(null);await load()}catch(e){setNotice((e as Error).message)}finally{setBusy(false)}};
  if(!ready)return <main className="center">Opening your finance workspace…</main>;
