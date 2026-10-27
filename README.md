@@ -1,6 +1,6 @@
 # Ledger — Personal Finance Agent
 
-A Next.js dashboard for the existing Supabase project, with signed-in transaction views, AI categorization, and receipt analysis.
+A Next.js dashboard for the existing Supabase project, with signed-in transaction views, AI categorization, and receipt analysis. Bank-statement PDFs are text-extracted in the browser without an AI service; scanned/image-only PDFs are not supported yet.
 
 ## Vercel
 
@@ -9,7 +9,7 @@ Add these variables to the Vercel project for Preview and Production:
 - `NEXT_PUBLIC_SUPABASE_URL` = `https://wqizcjgsyfhsvdtbvkrk.supabase.co`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = the project's `sb_publishable_...` key (or its legacy anon key)
 
-Redeploy after setting them. The publishable key is intended for browser use; never set a service-role or OpenAI key as a `NEXT_PUBLIC_` variable. Supabase Auth and row-level security must restrict the finance tables to signed-in users. Categorization and receipt analysis call the existing JWT-protected Edge Functions; keep their service-role and OpenAI keys in Supabase secrets.
+Redeploy after setting them. The publishable key is intended for browser use; never set a service-role or AI provider key as a `NEXT_PUBLIC_` variable. Supabase Auth and row-level security must restrict the finance tables to signed-in users. PDF text extraction happens in the browser and only the extracted transactions are sent to the JWT-protected Supabase import function. Categorization and receipt analysis still use the existing JWT-protected Edge Functions; keep their service-role and AI provider keys in Supabase secrets.
 
 The Supabase project was reported as inactive during setup, and the database table lookup timed out. Resume the project and confirm its RLS policies if the dashboard cannot load records.
 
